@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  CertificateARN:
+    Type: String
+  DomainName:
+    Type: String
+  HostedZoneID:
+    Type: String
+Resources:
+  S3Hosting:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref DomainName
+  CDNOriginIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "Cloudfront Origin identity for ${DomainName}"
+  S3HostingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Hosting
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${S3Hosting}/*"
+  CDN:
+    Type: "AWS::CloudFront::Distribution"
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Ref DomainName
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: True
+          TargetOriginId: !Sub "S3-origin-${S3Hosting}"
+          ViewerProtocolPolicy: redirect-to-https
+          MinTTL: 0
+          MaxTTL: 0
+          DefaultTTL: 0
+        CacheBehaviors:
+        - AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: True
+          TargetOriginId: !Sub "S3-origin-${S3Hosting}"
+          ViewerProtocolPolicy: redirect-to-https
+          MinTTL: 0
+          MaxTTL: 31536000
+          DefaultTTL: 86400
+          PathPattern: photos/*
+        DefaultRootObject: index.html
+        Enabled: True
+        Origins:
+          - DomainName: !GetAtt S3Hosting.RegionalDomainName
+            Id: !Sub "S3-origin-${S3Hosting}"
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CDNOriginIdentity}"
+        CustomErrorResponses: #send 404 to index.html to be handled by our SPA
+        - ErrorCode: '404'
+          ResponsePagePath: "/index.html"
+          ResponseCode: '200'
+          ErrorCachingMinTTL: '0'
+        - ErrorCode: '403'
+          ResponsePagePath: "/index.html"
+          ResponseCode: '200'
+          ErrorCachingMinTTL: '0'
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateARN
+          MinimumProtocolVersion: TLSv1.2_2018
+          SslSupportMethod: sni-only
+  DNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref HostedZoneID
+      RecordSets:
+        - AliasTarget:
+            DNSName: !GetAtt CDN.DomainName
+            HostedZoneId: Z2FDTNDATAQYW2 #cloudfront distributions always use this zoneid
+          Name: !Ref DomainName
+          Type: A

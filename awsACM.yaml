@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  DomainName:
+    Type: String
+  ZoneID:
+    Type: String
+Resources:
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      # For non-Route 53 options, drop the DomainValidationOptions
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref ZoneID
+      ValidationMethod: DNS

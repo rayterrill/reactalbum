@@ -1,0 +1,30 @@
+body {
+    font-family: Proxima Nova,helvetica neue,helvetica,arial,sans-serif;
+    text-shadow: 0 1px 1px #000;
+    color: #fff;
+}
+
+.card {
+    min-width: 18rem;
+}
+
+@media (min-width: 768px) {
+    .card {
+        max-width: 50%;
+    }
+}
+
+@media (min-width: 1200px) {
+    .card {
+        max-width: 30%;
+    }
+}
+
+a {
+    color:inherit;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #ccc;
+}
