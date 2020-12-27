@@ -18,8 +18,11 @@ function App() {
 		fetch("../data/index.json")
 			.then((response) => response.json())
 			.then((data) => {
-				setAlbums(data);
-			})
+        setAlbums(data);
+
+        //set the website title based on the json data
+        document.title = data.title;
+      });
   }, []);
 
   //render interface
